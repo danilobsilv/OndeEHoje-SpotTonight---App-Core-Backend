@@ -27,9 +27,8 @@ replay_pid*
 target/
 .env
 .env.*
-!.env.example
 .idea/
 .vscode/
 *.iml
 PACKAGE_CONTENTS.txt
-LOCAL_SETUP.md
+.env.example

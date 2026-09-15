@@ -1,0 +1,10 @@
+# Allow only build inputs; excludes .env, Git, IDE files, tests and host artifacts.
+**
+!pom.xml
+!mvnw
+!.mvn/
+!.mvn/wrapper/
+!.mvn/wrapper/maven-wrapper.properties
+!src/
+!src/main/
+!src/main/**

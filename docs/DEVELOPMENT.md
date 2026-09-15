@@ -14,17 +14,30 @@ PostgreSQL (Docker)
 Example:
 
 ```bash
-docker compose up -d postgres
-./mvnw spring-boot:run
+docker compose up -d --wait postgres
+./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
 This preserves easy debugging while keeping PostgreSQL reproducible.
 
 ## Full container workflow
 
-A Dockerfile and Docker Compose configuration may also run the complete backend as containers.
+A multi-stage backend Dockerfile and Docker Compose configuration are required as
+part of M0. Both the host-JVM workflow and the fully containerized backend +
+PostgreSQL workflow must remain supported.
 
-This is useful for deployment parity and CI.
+```bash
+docker compose build
+docker compose up -d --wait
+```
+
+The backend waits for healthy PostgreSQL, connects to `postgres:5432` over the
+Compose network, and exposes port 8080 on localhost. Flyway runs during Spring
+startup. Both services have healthchecks and PostgreSQL uses a persistent volume.
+
+See [LOCAL_SETUP.md](../LOCAL_SETUP.md) for environment configuration, prerequisites,
+both workflows, and validation commands. Compose reads `.env`; Spring Boot on the
+host requires the corresponding environment variables to be exported.
 
 ## Configuration
 

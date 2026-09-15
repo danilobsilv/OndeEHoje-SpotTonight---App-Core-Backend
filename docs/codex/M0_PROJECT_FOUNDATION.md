@@ -21,7 +21,16 @@ Bootstrap the Java backend infrastructure without implementing business features
 - Spring Boot Actuator;
 - OpenAPI/Swagger;
 - Testcontainers PostgreSQL;
-- Docker Compose service for local PostgreSQL;
+- production-oriented multi-stage backend Dockerfile using Java 21 and Maven Wrapper,
+  with a non-root JRE runtime and Actuator healthcheck;
+- `.dockerignore` excluding credentials, Git metadata and host build artifacts;
+- Docker Compose services for the backend and local PostgreSQL, preserving the
+  PostgreSQL persistent volume and healthcheck;
+- backend startup dependent on PostgreSQL health, using `postgres:5432` internally
+  and publishing backend port 8080 locally;
+- environment-based configuration with `.env` gitignored and a secret-free `.env.example`;
+- tracked `LOCAL_SETUP.md` covering host Spring Boot + Docker PostgreSQL and the full
+  containerized stack;
 - application profiles/configuration;
 - `ddl-auto=validate`;
 - `open-in-view=false`;
@@ -46,6 +55,13 @@ Bootstrap the Java backend infrastructure without implementing business features
 ## Acceptance criteria
 
 - `./mvnw test` passes.
+- `./mvnw verify` passes;
+- `docker compose config`, `docker compose build`, and `docker compose up` succeed;
+- PostgreSQL and backend containers become healthy;
+- `http://localhost:8080/actuator/health` returns `UP`;
+- Flyway runs successfully during container startup and backend database connections
+  use the Compose network and service name `postgres`, never host localhost;
+- both documented development workflows remain supported;
 - application starts against Docker PostgreSQL;
 - Flyway executes successfully;
 - no real credentials are committed;

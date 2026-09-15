@@ -164,6 +164,23 @@ Never log passwords, JWTs, or refresh tokens.
 - Avoid accidental N+1 queries.
 - Do not add PostGIS until explicitly requested.
 
+## Containerization and development workflows
+
+- Backend containerization is a permanent M0 requirement.
+- Maintain a multi-stage Dockerfile: Java 21 JDK and Maven Wrapper for the build;
+  Java 21 JRE, application artifact, and healthcheck tooling only in the runtime.
+- Run the backend container as a non-root user; never bake credentials into images.
+- Maintain `.dockerignore` to exclude secrets, Git metadata, and host build artifacts.
+- Compose must support both PostgreSQL alone for host-JVM development and the full
+  backend + PostgreSQL stack. Keep `LOCAL_SETUP.md` tracked and document both modes.
+- Preserve PostgreSQL's persistent volume and healthcheck. The backend must wait for
+  database health and connect to `postgres:5432` through Compose networking.
+- Publish the backend on local port 8080 and check `/actuator/health` for container health.
+- Supply configuration through environment variables. Keep `.env` gitignored.
+- Flyway runs during Spring startup; retain `ddl-auto=validate` and `open-in-view=false`.
+- Validate container changes with Maven `test` and `verify`, Compose config/build/up,
+  both services' health, Flyway success, and database connectivity over Docker networking.
+
 ## Testing requirements
 
 No feature is complete without tests.
