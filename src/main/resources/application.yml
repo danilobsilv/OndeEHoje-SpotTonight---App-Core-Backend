@@ -12,6 +12,8 @@ spring:
   flyway:
     enabled: true
   jackson:
+    deserialization:
+      fail-on-unknown-properties: true
     serialization:
       write-dates-as-timestamps: false
 management:
@@ -30,3 +32,11 @@ springdoc:
 logging:
   pattern:
     level: '%5p [requestId=%X{requestId:-}]'
+app:
+  auth:
+    jwt-secret: ${JWT_SECRET}
+    issuer: onde-e-hoje
+    audience: onde-e-hoje-api
+    access-token-ttl: ${ACCESS_TOKEN_TTL:PT15M}
+    refresh-token-ttl: ${REFRESH_TOKEN_TTL:P30D}
+    cookie-secure: ${AUTH_COOKIE_SECURE:true}
