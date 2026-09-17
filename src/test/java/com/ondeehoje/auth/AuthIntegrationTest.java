@@ -11,7 +11,10 @@ import com.ondeehoje.auth.service.AccessTokenService;
 import com.ondeehoje.auth.dto.RegisterRequest;
 import com.ondeehoje.auth.service.RefreshTokenCodec;
 import com.ondeehoje.shared.error.ApiException;
+import com.ondeehoje.user.model.User;
+import com.ondeehoje.user.repository.UserRepository;
 import jakarta.servlet.http.Cookie;
+import java.sql.SQLException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.*;
@@ -43,6 +46,8 @@ class AuthIntegrationTest {
     static class AdminFixture {
         @org.springframework.web.bind.annotation.GetMapping("/api/v1/admin/probe")
         String admin() { return "admin"; }
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/admin/probe")
+        String adminPost() { return "admin"; }
     }
     @Container static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:17.6");
     @DynamicPropertySource
@@ -58,6 +63,8 @@ class AuthIntegrationTest {
     @Autowired RefreshTokenCodec codec;
     @Autowired AuthService auth;
     @MockitoSpyBean AccessTokenService accessTokens;
+    @MockitoSpyBean UserRepository users;
+    @MockitoSpyBean JwtDecoder decoder;
     @Autowired JwtEncoder encoder;
     @Autowired AuthProperties properties;
     private static final String PASSWORD = "correct horse battery staple";
@@ -93,6 +100,10 @@ class AuthIntegrationTest {
         assertThat(hash).startsWith("$2").isNotEqualTo(PASSWORD);
         assertThat(passwords.matches(PASSWORD, hash)).isTrue();
         mvc.perform(secured("/register").content(registration(email.toUpperCase(Locale.ROOT))))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EMAIL_ALREADY_EXISTS"));
+        // Simulate a stale pre-check to exercise the real PostgreSQL constraint exception.
+        doReturn(false).when(users).existsByEmail(email);
+        mvc.perform(secured("/register").content(registration(email)))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.code").value("EMAIL_ALREADY_EXISTS"));
     }
 
@@ -251,8 +262,12 @@ class AuthIntegrationTest {
     void databaseRejectsUnnormalizedEmailInvalidRolesAndRawTokens() throws Exception {
         register();
         UUID id = jdbc.queryForObject("select id from users where email=?", UUID.class, email);
-        assertThatThrownBy(() -> jdbc.update("update users set email=? where id=?", email.toUpperCase(Locale.ROOT), id))
-                .isInstanceOf(DataIntegrityViolationException.class);
+        for (String invalid : List.of(email.toUpperCase(Locale.ROOT), " " + email, email + " ")) {
+            assertThatThrownBy(() -> jdbc.update("update users set email=? where id=?", invalid, id))
+                    .isInstanceOf(DataIntegrityViolationException.class);
+        }
+        assertThat(jdbc.queryForList("select indexname from pg_indexes where schemaname='public' "
+                + "and tablename='users'", String.class)).containsExactlyInAnyOrder("users_pkey", "uk_users_email");
         assertThatThrownBy(() -> jdbc.update("insert into user_roles(user_id,role) values (?,?)", id, "OWNER"))
                 .isInstanceOf(DataIntegrityViolationException.class);
         assertThatThrownBy(() -> jdbc.update("insert into refresh_tokens(id,user_id,token_hash,created_at,expires_at)"
@@ -283,12 +298,22 @@ class AuthIntegrationTest {
 
     @Test
     void concurrentRegistrationHasOneAccountAndOneConflict() throws Exception {
+        // Force both calls past the friendly pre-check before either attempts the insert.
+        var prechecks = new CountDownLatch(2);
+        doAnswer(invocation -> {
+            prechecks.countDown();
+            assertThat(prechecks.await(10, TimeUnit.SECONDS)).isTrue();
+            return false;
+        }).when(users).existsByEmail(email);
         try (var pool = Executors.newFixedThreadPool(2)) {
             var gate = new CountDownLatch(1);
             Callable<Integer> attempt = () -> {
                 gate.await();
                 try { auth.register(new RegisterRequest("Alice", email, PASSWORD)); return 201; }
-                catch (ApiException ex) { return ex.getStatus(); }
+                catch (ApiException ex) {
+                    assertThat(ex.getCode()).isEqualTo("EMAIL_ALREADY_EXISTS");
+                    return ex.getStatus();
+                }
             };
             var first = pool.submit(attempt);
             var second = pool.submit(attempt);
@@ -297,6 +322,49 @@ class AuthIntegrationTest {
                     .containsExactlyInAnyOrder(201, 409);
         }
         assertThat(jdbc.queryForObject("select count(*) from users where email=?", Integer.class, email)).isEqualTo(1);
+    }
+
+    @Test
+    void unrelatedIntegrityViolationPropagatesAndHasSanitizedHttpError() throws Exception {
+        var failure = new DataIntegrityViolationException("private database details",
+                new org.hibernate.exception.ConstraintViolationException("private constraint details",
+                        new SQLException("private SQL details", "23514"), "users_name_check"));
+        doThrow(failure).when(users).saveAndFlush(any(User.class));
+        assertThatThrownBy(() -> auth.register(new RegisterRequest("Alice", email, PASSWORD))).isSameAs(failure);
+        mvc.perform(secured("/register").content(registration(email)))
+                .andExpect(status().isInternalServerError())
+                .andExpect(jsonPath("$.code").value("INTERNAL_ERROR"))
+                .andExpect(jsonPath("$.message").value("An unexpected error occurred."))
+                .andExpect(jsonPath("$.fieldErrors").isEmpty())
+                .andExpect(header().exists("X-Request-Id"))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("private"))));
+        assertThat(jdbc.queryForObject("select count(*) from users where email=?", Integer.class, email)).isZero();
+    }
+
+    @Test
+    void bearerNamespacesSkipCsrfButStillEnforceAuthorization() throws Exception {
+        register();
+        var login = login();
+        String access = mapper.readTree(login.getResponse().getContentAsString()).get("accessToken").asText();
+        Cookie refresh = login.getResponse().getCookie("refresh_token");
+        for (String path : List.of("/api/v1/users/me/establishments",
+                "/api/v1/users/me/establishments/" + UUID.randomUUID() + "/operating-hours",
+                "/api/v1/admin/probe")) {
+            clearInvocations(decoder);
+            mvc.perform(post(path).header("Authorization", "Bearer " + access))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+            // The Bearer filter runs after CsrfFilter: decoding proves CSRF did not reject this request.
+            verify(decoder).decode(access);
+            mvc.perform(post(path).cookie(refresh)).andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+            mvc.perform(post(path)).andExpect(status().isUnauthorized());
+            mvc.perform(get(path).cookie(refresh)).andExpect(status().isUnauthorized());
+        }
+        // This is a test-only fixture; no production admin or owner API is introduced.
+        jdbc.update("insert into user_roles(user_id,role) select id,'ADMIN' from users where email=?", email);
+        String adminAccess = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
+        mvc.perform(post("/api/v1/admin/probe").header("Authorization", "Bearer " + adminAccess))
+                .andExpect(status().isOk()).andExpect(content().string("admin"));
     }
 
     @Test

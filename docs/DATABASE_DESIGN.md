@@ -20,6 +20,11 @@ updated_at      TIMESTAMPTZ NOT NULL
 
 Application normalizes emails before persistence.
 
+M1 enforces `email = lower(trim(email))` and nonempty email through the
+`users_email_normalized` CHECK, and has one explicitly named UNIQUE constraint,
+`uk_users_email`, on `email`. A unique functional index on `lower(email)` is
+unnecessary because the CHECK guarantees normalized storage.
+
 ### user_roles
 
 ```text

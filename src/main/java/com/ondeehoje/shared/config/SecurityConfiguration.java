@@ -78,7 +78,7 @@ public class SecurityConfiguration {
             authorize.anyRequest().denyAll();
         });
         configureStateless(http, mapper, errors);
-        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/users/me", "/api/v1/admin/**"));
+        http.csrf(csrf -> csrf.ignoringRequestMatchers("/api/v1/users/me/**", "/api/v1/admin/**"));
         var authorities = new JwtGrantedAuthoritiesConverter();
         authorities.setAuthoritiesClaimName("roles");
         authorities.setAuthorityPrefix("ROLE_");

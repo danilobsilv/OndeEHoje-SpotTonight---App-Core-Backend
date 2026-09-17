@@ -45,7 +45,10 @@ public class AuthService {
         if (users.existsByEmail(request.email())) throw duplicateEmail();
         var user = new User(request.name(), request.email(), passwords.encode(request.password()), clock.instant());
         try { users.saveAndFlush(user); }
-        catch (DataIntegrityViolationException ex) { throw duplicateEmail(); }
+        catch (DataIntegrityViolationException ex) {
+            if (EmailUniqueConstraint.isViolation(ex)) throw duplicateEmail();
+            throw ex;
+        }
         return UserResponse.from(user);
     }
 

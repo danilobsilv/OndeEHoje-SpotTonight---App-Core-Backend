@@ -186,6 +186,12 @@ never exempts CSRF. The Bearer API chain accepts only Authorization-header JWTs,
 has no session/form/basic authentication, and exempts its explicit API namespaces
 from CSRF. Other routes remain denied; health and local-only Swagger remain public.
 
+The explicit Bearer CSRF exemptions are `/api/v1/users/me/**` and
+`/api/v1/admin/**`. Exemption does not grant access: M1 still authorizes only
+GET `/api/v1/users/me` in the user namespace, and denies unimplemented owner
+routes. Admin routes require ADMIN. A refresh cookie cannot authenticate either
+namespace. The dedicated `/api/v1/auth/**` chain remains CSRF protected.
+
 ## M1 token and persistence details
 
 - HS256 JWTs use `JWT_SECRET`, a Base64-encoded random key of at least 32 bytes.
@@ -220,3 +226,10 @@ Authentication errors retain the common API error schema: duplicate registration
 is 409 EMAIL_ALREADY_EXISTS; invalid login is 401 INVALID_CREDENTIALS; unusable
 refresh is 401 INVALID_REFRESH_TOKEN; missing/invalid JWT is 401 UNAUTHORIZED;
 CSRF and authorization denial use 403 FORBIDDEN.
+
+Registration keeps the email existence pre-check for the common duplicate case.
+For races, it maps an integrity exception to EMAIL_ALREADY_EXISTS only when a
+Hibernate ConstraintViolationException in the cause chain identifies
+`uk_users_email` with SQLSTATE `23505`. It does not inspect exception messages.
+Other integrity failures propagate to the standardized, sanitized INTERNAL_ERROR
+response rather than being mislabeled as duplicate email.

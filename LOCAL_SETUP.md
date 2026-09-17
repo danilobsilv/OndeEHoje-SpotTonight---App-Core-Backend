@@ -157,6 +157,32 @@ PostgreSQL containers, need no `.env`, and fail rather than skip when Docker is
 unavailable. Container changes also require the Compose build/startup/health
 checks above and inspection of Flyway startup logs.
 
+## One-time M1 pre-merge schema cleanup
+
+Before M1 was shared or merged, V1 was edited to replace the redundant email
+indexes with the explicitly named `uk_users_email` UNIQUE constraint while
+retaining the normalization CHECK. V0 and V2 did not change. A database that
+already applied the old V1 has an obsolete Flyway checksum and must not simply
+be restarted with the edited migration or have its checksum repaired.
+
+For this branch's **disposable local development database only**, the hardening
+validation recreated the Compose volume below. This deletes its local accounts
+and refresh sessions. Keep `.env` so the recreated database uses the same local
+configuration. The volume name is specific to this repository's default Compose
+project; inspect its labels and verify the project before removing it.
+
+```sh
+docker volume inspect ondeehoje-spottonight---app-core-backend_postgres_data
+docker compose down
+docker volume rm ondeehoje-spottonight---app-core-backend_postgres_data
+docker compose build
+docker compose up -d --wait --wait-timeout 180
+```
+
+Fresh startup must apply V0/V1/V2 and pass Hibernate `ddl-auto=validate`.
+Do not use this reset procedure on shared/staging/production databases. Once
+migrations are shared, use new migrations instead of editing V1.
+
 ## Shutdown and data persistence
 
 ```sh
