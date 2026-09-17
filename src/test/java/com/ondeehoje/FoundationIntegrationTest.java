@@ -53,15 +53,15 @@ class FoundationIntegrationTest {
     }
 
     @Test
-    void startsWithPostgresFlywayAndJpaWithoutBusinessTables() {
+    void startsWithPostgresFlywayAndValidatedM1Schema() {
         assertThat(entityManagerFactory.isOpen()).isTrue();
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("0");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("2");
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbc.queryForList("select tablename from pg_tables where schemaname = 'public'", String.class))
-                .containsExactly("flyway_schema_history");
+                .containsExactlyInAnyOrder("flyway_schema_history", "users", "user_roles", "refresh_tokens");
     }
 
     @Test

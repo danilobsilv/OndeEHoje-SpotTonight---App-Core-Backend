@@ -1,8 +1,8 @@
-﻿# M0.1 local setup
+# Local setup (M1)
 
 Both supported development modes use PostgreSQL 17.6, Flyway at Spring startup,
-`ddl-auto=validate`, and `open-in-view=false`. No business features or authentication
-flows are implemented yet.
+`ddl-auto=validate`, and `open-in-view=false`. M1 provides registration, login,
+Bearer access tokens, cookie-based refresh/logout, and the current user profile.
 
 ## Prerequisites and configuration
 
@@ -15,6 +15,24 @@ flows are implemented yet.
 Copy `.env.example` to `.env` and fill in `DB_USERNAME` and `DB_PASSWORD` with
 local-only credentials. `.env` is gitignored and excluded from the Docker build
 context. No credentials are embedded in the image.
+
+Also set `JWT_SECRET` to a Base64-encoded cryptographically random key of at least
+32 bytes. There is no application default. Generate one locally without committing it:
+
+```powershell
+$keyBytes = New-Object byte[] 32
+$rng = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+$rng.GetBytes($keyBytes)
+$rng.Dispose()
+$env:JWT_SECRET = [Convert]::ToBase64String($keyBytes)
+```
+
+Keep that value in your gitignored `.env` for Compose and export it for host runs.
+Restarting with a different key invalidates existing access tokens.
+Defaults are `ACCESS_TOKEN_TTL=PT15M`, `REFRESH_TOKEN_TTL=P30D`, and
+`AUTH_COOKIE_SECURE=true`. For a plain-HTTP local browser, explicitly set
+`AUTH_COOKIE_SECURE=false` in `.env` (or the host environment). This is accepted
+only with `local` active and `prod` absent. Production requires HTTPS and secure cookies.
 
 | Variable | Host Spring Boot | Compose backend |
 | --- | --- | --- |
@@ -79,11 +97,14 @@ waits for PostgreSQL's existing healthcheck. Docker's service DNS resolves
 The backend is published at `127.0.0.1:8080`. Its healthcheck calls Actuator from
 inside the container. Actuator includes the database health indicator; database
 failure makes health return an unsuccessful HTTP status. Startup logs show Flyway
-applying V0 on a fresh database or finding an already migrated database up to date.
+applying V0, V1, and V2 on a fresh database or finding an already migrated database up to date.
 
 Rebuild after source changes with `docker compose up -d --build --wait`.
 
 ## Endpoints and verification
+
+The browser authentication contract and CSRF sequence are documented in
+[AUTHENTICATION.md](docs/AUTHENTICATION.md#m1-api-contract-and-browser-csrf).
 
 - Health: http://localhost:8080/actuator/health — expected `{"status":"UP"}`.
 - Local Swagger UI: http://localhost:8080/swagger-ui/index.html.
@@ -135,6 +156,32 @@ On Bash use `bash ./mvnw test` and `bash ./mvnw verify`. Tests use disposable
 PostgreSQL containers, need no `.env`, and fail rather than skip when Docker is
 unavailable. Container changes also require the Compose build/startup/health
 checks above and inspection of Flyway startup logs.
+
+## One-time M1 pre-merge schema cleanup
+
+Before M1 was shared or merged, V1 was edited to replace the redundant email
+indexes with the explicitly named `uk_users_email` UNIQUE constraint while
+retaining the normalization CHECK. V0 and V2 did not change. A database that
+already applied the old V1 has an obsolete Flyway checksum and must not simply
+be restarted with the edited migration or have its checksum repaired.
+
+For this branch's **disposable local development database only**, the hardening
+validation recreated the Compose volume below. This deletes its local accounts
+and refresh sessions. Keep `.env` so the recreated database uses the same local
+configuration. The volume name is specific to this repository's default Compose
+project; inspect its labels and verify the project before removing it.
+
+```sh
+docker volume inspect ondeehoje-spottonight---app-core-backend_postgres_data
+docker compose down
+docker volume rm ondeehoje-spottonight---app-core-backend_postgres_data
+docker compose build
+docker compose up -d --wait --wait-timeout 180
+```
+
+Fresh startup must apply V0/V1/V2 and pass Hibernate `ddl-auto=validate`.
+Do not use this reset procedure on shared/staging/production databases. Once
+migrations are shared, use new migrations instead of editing V1.
 
 ## Shutdown and data persistence
 

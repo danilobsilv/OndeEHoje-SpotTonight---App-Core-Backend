@@ -54,6 +54,12 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 "An unexpected error occurred.", path(request)));
     }
 
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<Object> handleApi(ApiException ex, WebRequest request) {
+        return ResponseEntity.status(ex.getStatus()).body(errors.create(ex.getStatus(), ex.getCode(),
+                ex.getMessage(), path(request)));
+    }
+
     private String path(WebRequest request) {
         return ((ServletWebRequest) request).getRequest().getRequestURI();
     }

@@ -1,3 +1,7 @@
 spring:
   main:
     banner-mode: off
+app:
+  auth:
+    # Public test fixture only; never used by the application outside tests.
+    jwt-secret: dGVzdC1vbmx5LWtleS0zMi1ieXRlcy1sb25nLW5vdC1hLXNlY3JldA==

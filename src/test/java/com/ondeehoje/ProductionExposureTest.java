@@ -14,11 +14,16 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-@WebMvcTest(excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
-@Import({SecurityConfiguration.class, ClockConfiguration.class, ApiErrorFactory.class})
-@ActiveProfiles({"local", "prod"})
+@WebMvcTest(controllers = ProductionExposureTest.FixtureController.class,
+        excludeAutoConfiguration = UserDetailsServiceAutoConfiguration.class)
+@Import({SecurityConfiguration.class, ClockConfiguration.class, ApiErrorFactory.class,
+        com.ondeehoje.auth.security.TokenConfiguration.class})
+@ActiveProfiles({"test", "local", "prod"})
 class ProductionExposureTest {
     @Autowired MockMvc mvc;
+
+    @org.springframework.web.bind.annotation.RestController
+    static class FixtureController {}
 
     @Test
     void productionDeniesDocsEvenWhenLocalIsAlsoActive() throws Exception {
