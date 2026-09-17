@@ -69,6 +69,7 @@ public class SecurityConfiguration {
                 && !environment.acceptsProfiles(Profiles.of("prod"));
         http.authorizeHttpRequests(authorize -> {
             authorize.requestMatchers("/actuator/health", "/actuator/health/**").permitAll();
+            authorize.requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll();
             authorize.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
             authorize.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated();
             if (local) {

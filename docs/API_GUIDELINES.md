@@ -36,6 +36,20 @@ GET /api/v1/categories
 
 Only active categories are public.
 
+M2 returns an unpaginated JSON array, ordered by name ascending and then slug
+ascending for equal names. Filtering and ordering are performed in PostgreSQL.
+No authentication or CSRF token is required for this exact GET endpoint.
+
+```json
+[
+  {"id": "00000000-0000-4000-8000-000000000001", "name": "Bar", "slug": "bar"}
+]
+```
+
+Each item contains only `id`, `name`, and `slug`. An empty active set returns
+`200 OK` with `[]`. Category detail and write endpoints are not implemented;
+the public permission does not extend to other methods or child paths.
+
 ## Public establishments
 
 ```text

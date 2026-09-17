@@ -61,7 +61,26 @@ active          BOOLEAN NOT NULL DEFAULT TRUE
 created_at      TIMESTAMPTZ NOT NULL
 ```
 
-Categories may be seeded using Flyway.
+M2 creates and seeds this table through `V3__create_categories.sql`. Names are
+limited to 120 characters and must contain a non-whitespace character. Slugs
+are limited to 80 characters, use lowercase ASCII letters/digits separated by
+single hyphens, and are protected by the named UNIQUE constraint
+`uk_categories_slug`. Slugs are stable identifiers, not display names.
+
+The initial seed is small and uses fixed UUIDs:
+
+| Name | Slug | UUID |
+| --- | --- | --- |
+| Bar | bar | 00000000-0000-4000-8000-000000000001 |
+| Restaurant | restaurant | 00000000-0000-4000-8000-000000000002 |
+| Café | cafe | 00000000-0000-4000-8000-000000000003 |
+| Nightclub | nightclub | 00000000-0000-4000-8000-000000000004 |
+| Pub | pub | 00000000-0000-4000-8000-000000000005 |
+
+All five are initially active, with a fixed creation timestamp of
+`2026-09-17T00:00:00Z`. Inactive rows remain stored but are excluded by the
+public query. No category administration or establishment relationship is
+implemented in M2. V0, V1 and V2 are unchanged.
 
 ### establishments
 

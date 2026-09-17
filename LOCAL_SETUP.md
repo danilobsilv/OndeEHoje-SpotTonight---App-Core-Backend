@@ -1,8 +1,9 @@
-# Local setup (M1)
+# Local setup (M2)
 
 Both supported development modes use PostgreSQL 17.6, Flyway at Spring startup,
 `ddl-auto=validate`, and `open-in-view=false`. M1 provides registration, login,
 Bearer access tokens, cookie-based refresh/logout, and the current user profile.
+M2 adds the public, database-backed active category list.
 
 ## Prerequisites and configuration
 
@@ -97,7 +98,8 @@ waits for PostgreSQL's existing healthcheck. Docker's service DNS resolves
 The backend is published at `127.0.0.1:8080`. Its healthcheck calls Actuator from
 inside the container. Actuator includes the database health indicator; database
 failure makes health return an unsuccessful HTTP status. Startup logs show Flyway
-applying V0, V1, and V2 on a fresh database or finding an already migrated database up to date.
+applying V0 through V3 on a fresh database, upgrading an M1 database with V3,
+or finding an already migrated database up to date. M2 requires no volume reset.
 
 Rebuild after source changes with `docker compose up -d --build --wait`.
 
@@ -107,6 +109,8 @@ The browser authentication contract and CSRF sequence are documented in
 [AUTHENTICATION.md](docs/AUTHENTICATION.md#m1-api-contract-and-browser-csrf).
 
 - Health: http://localhost:8080/actuator/health — expected `{"status":"UP"}`.
+- Categories: http://localhost:8080/api/v1/categories — public JSON array of active
+  categories, ordered by name and then slug, with only id/name/slug fields.
 - Local Swagger UI: http://localhost:8080/swagger-ui/index.html.
 - Local OpenAPI: http://localhost:8080/v3/api-docs.
 
@@ -179,7 +183,7 @@ docker compose build
 docker compose up -d --wait --wait-timeout 180
 ```
 
-Fresh startup must apply V0/V1/V2 and pass Hibernate `ddl-auto=validate`.
+Fresh startup must apply all available migrations and pass Hibernate `ddl-auto=validate`.
 Do not use this reset procedure on shared/staging/production databases. Once
 migrations are shared, use new migrations instead of editing V1.
 
