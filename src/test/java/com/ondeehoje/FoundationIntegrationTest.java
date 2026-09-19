@@ -53,16 +53,23 @@ class FoundationIntegrationTest {
     }
 
     @Test
-    void startsWithPostgresFlywayAndValidatedM2Schema() {
+    void startsWithPostgresFlywayAndValidatedM3Schema() {
         assertThat(entityManagerFactory.isOpen()).isTrue();
         assertThat(environment.getProperty("spring.jpa.hibernate.ddl-auto")).isEqualTo("validate");
         assertThat(environment.getProperty("spring.jpa.open-in-view")).isEqualTo("false");
-        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("3");
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("4");
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         assertThat(jdbc.queryForList("select tablename from pg_tables where schemaname = 'public'", String.class))
-                .containsExactlyInAnyOrder("flyway_schema_history", "users", "user_roles", "refresh_tokens", "categories");
-    }
+                .containsExactlyInAnyOrder(
+                    "flyway_schema_history",
+                    "users",
+                    "user_roles",
+                    "refresh_tokens",
+                    "categories",
+                    "establishments"
+                );
+            }
 
     @Test
     void healthIsPublicAndDoesNotExposeDetails() throws Exception {

@@ -54,7 +54,7 @@ class CategoryIntegrationTest {
     @Test
     void flywayCreatesAndSeedsStableCategories() {
         assertThat(Arrays.stream(flyway.info().applied()).map(m -> m.getVersion().getVersion()))
-                .containsExactly("0", "1", "2", "3");
+                .containsExactly("0", "1", "2", "3", "4");
         assertThat(flyway.validateWithResult().validationSuccessful).isTrue();
         assertThat(flyway.migrate().migrationsExecuted).isZero();
         var seeded = categories.findAll();
