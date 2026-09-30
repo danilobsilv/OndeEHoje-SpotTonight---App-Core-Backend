@@ -55,7 +55,7 @@ for the client sequence and production/local configuration.
 
 ## Files created
 
-Paths below are relative to `src/main/java/com/ondeehoje/`:
+Paths below are relative to `src/main/java/com/spotnight/`:
 
 - `auth/controller/AuthController.java`
 - `auth/dto/AccessTokenResponse.java`
@@ -80,21 +80,21 @@ Paths below are relative to `src/main/java/com/ondeehoje/`:
 Other new files:
 
 - The two Flyway migrations above.
-- `src/test/java/com/ondeehoje/auth/AuthIntegrationTest.java`
-- `src/test/java/com/ondeehoje/auth/RefreshTokenCodecTest.java`
-- `src/test/java/com/ondeehoje/auth/security/TokenConfigurationTest.java`
+- `src/test/java/com/spotnight/auth/AuthIntegrationTest.java`
+- `src/test/java/com/spotnight/auth/RefreshTokenCodecTest.java`
+- `src/test/java/com/spotnight/auth/security/TokenConfigurationTest.java`
 - `docs/codex/M1_IMPLEMENTATION.md` (this report).
 
 ## Files modified
 
 - `pom.xml`: Spring Security OAuth2 resource-server starter for its standard
   Bearer filter and Nimbus JWT signing/verification.
-- `src/main/java/com/ondeehoje/shared/config/SecurityConfiguration.java`
-- `src/main/java/com/ondeehoje/shared/error/GlobalExceptionHandler.java`
+- `src/main/java/com/spotnight/shared/config/SecurityConfiguration.java`
+- `src/main/java/com/spotnight/shared/error/GlobalExceptionHandler.java`
 - `src/main/resources/application.yml`
 - `src/test/resources/application-test.yml`
-- `src/test/java/com/ondeehoje/FoundationIntegrationTest.java`
-- `src/test/java/com/ondeehoje/ProductionExposureTest.java`
+- `src/test/java/com/spotnight/FoundationIntegrationTest.java`
+- `src/test/java/com/spotnight/ProductionExposureTest.java`
 - `compose.yaml`
 - `.env.example` (pre-existing user edits preserved)
 - `LOCAL_SETUP.md`
@@ -119,7 +119,7 @@ tracked files. The Dockerfile and persistent-volume definition were unchanged.
   `docker compose up -d --wait --wait-timeout 180`: passed.
 - Both services healthy; health endpoint UP; Flyway applied V0/V1/V2 successfully.
 - Docker networking resolves `postgres`; backend JDBC URL is
-  `jdbc:postgresql://postgres:5432/ondeehoje`; backend UID/GID is 10001.
+  `jdbc:postgresql://postgres:5432/spotnight`; backend UID/GID is 10001.
 - Live HTTP checks through port 8080 passed for cookie attributes, registration,
   login, current profile, missing-CSRF rejection with Bearer, refresh rotation,
   old-token rejection, logout and revoked-token rejection.

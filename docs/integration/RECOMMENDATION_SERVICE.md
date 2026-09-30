@@ -5,10 +5,10 @@ This integration is **not part of backend V1**.
 ## Repositories
 
 ```text
-onde-e-hoje-backend
+spotnight-backend
     Java / Spring Boot
 
-onde-e-hoje-recommendation
+spotnight-recommendation
     Python / FastAPI
 ```
 

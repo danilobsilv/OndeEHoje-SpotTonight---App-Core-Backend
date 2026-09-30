@@ -1,4 +1,4 @@
-# AGENTS.md — Onde é Hoje Backend
+# AGENTS.md — SpotNight Backend
 
 This file contains repository-level instructions for Codex and other coding agents.
 
@@ -69,7 +69,7 @@ Use feature-first packaging.
 Example:
 
 ```text
-com.ondeehoje
+com.spotnight
 ├── auth/
 │   ├── controller/
 │   ├── service/

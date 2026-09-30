@@ -1,4 +1,4 @@
-# Domain Model — Onde é Hoje
+# Domain Model — SpotNight
 
 ## User
 

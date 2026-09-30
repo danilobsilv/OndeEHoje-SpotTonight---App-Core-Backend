@@ -1,6 +1,6 @@
 spring:
   application:
-    name: onde-e-hoje-backend
+    name: spotnight-backend
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
@@ -35,8 +35,8 @@ logging:
 app:
   auth:
     jwt-secret: ${JWT_SECRET}
-    issuer: onde-e-hoje
-    audience: onde-e-hoje-api
+    issuer: spotnight
+    audience: spotnight-api
     access-token-ttl: ${ACCESS_TOKEN_TTL:PT15M}
     refresh-token-ttl: ${REFRESH_TOKEN_TTL:P30D}
     cookie-secure: ${AUTH_COOKIE_SECURE:true}

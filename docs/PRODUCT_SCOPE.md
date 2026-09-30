@@ -1,8 +1,8 @@
-# Product Scope — Onde é Hoje
+# Product Scope — SpotNight
 
 ## Product idea
 
-**Onde é Hoje** is a backend-first location-aware platform for discovering establishments.
+**SpotNight** is a backend-first location-aware platform for discovering establishments.
 
 The primary user problem is:
 

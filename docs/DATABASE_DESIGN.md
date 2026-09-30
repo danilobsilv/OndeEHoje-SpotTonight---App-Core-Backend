@@ -1,4 +1,4 @@
-# Database Design — Onde é Hoje
+# Database Design — SpotNight
 
 Database: PostgreSQL.
 

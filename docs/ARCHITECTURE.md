@@ -1,4 +1,4 @@
-# Architecture — Onde é Hoje Backend
+# Architecture — SpotNight Backend
 
 ## Style
 
@@ -82,7 +82,7 @@ DTOs define the external API contract. JPA entities are never API request/respon
 Use package-by-feature with MVC layers inside each feature.
 
 ```text
-com.ondeehoje
+com.spotnight
 ├── auth/
 ├── user/
 ├── establishment/
