@@ -40,8 +40,20 @@ import org.testcontainers.junit.jupiter.*;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Testcontainers
-@org.springframework.context.annotation.Import(AuthIntegrationTest.AdminFixture.class)
+@org.springframework.context.annotation.Import({AuthIntegrationTest.AdminFixture.class,
+        AuthIntegrationTest.OwnerEstablishmentSecurityFixture.class})
 class AuthIntegrationTest {
+    @org.springframework.web.bind.annotation.RestController
+    static class OwnerEstablishmentSecurityFixture {
+        @org.springframework.web.bind.annotation.PostMapping("/api/v1/users/me/establishments")
+        String create() { return "authenticated"; }
+        @org.springframework.web.bind.annotation.GetMapping("/api/v1/users/me/establishments")
+        String list() { return "authenticated"; }
+        @org.springframework.web.bind.annotation.GetMapping("/api/v1/users/me/establishments/{id}")
+        String detail() { return "authenticated"; }
+        @org.springframework.web.bind.annotation.PutMapping("/api/v1/users/me/establishments/{id}")
+        String update() { return "authenticated"; }
+    }
     @org.springframework.web.bind.annotation.RestController
     static class AdminFixture {
         @org.springframework.web.bind.annotation.GetMapping("/api/v1/admin/probe")
@@ -347,8 +359,7 @@ class AuthIntegrationTest {
         var login = login();
         String access = mapper.readTree(login.getResponse().getContentAsString()).get("accessToken").asText();
         Cookie refresh = login.getResponse().getCookie("refresh_token");
-        for (String path : List.of("/api/v1/users/me/establishments",
-                "/api/v1/users/me/establishments/" + UUID.randomUUID() + "/operating-hours",
+        for (String path : List.of("/api/v1/users/me/establishments/" + UUID.randomUUID() + "/operating-hours",
                 "/api/v1/admin/probe")) {
             clearInvocations(decoder);
             mvc.perform(post(path).header("Authorization", "Bearer " + access))
@@ -374,6 +385,81 @@ class AuthIntegrationTest {
         String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
         mvc.perform(get("/api/v1/admin/probe").header("Authorization", "Bearer " + access))
                 .andExpect(status().isOk()).andExpect(content().string("admin"));
+    }
+
+    @Test
+    void missingTokenReturns401ForOwnerRoutes() throws Exception {
+        for (var request : ownerRequests()) {
+            mvc.perform(request).andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        }
+    }
+
+    @Test
+    void invalidBearerTokenReturns401ForOwnerRoutes() throws Exception {
+        for (var request : ownerRequests()) {
+            mvc.perform(request.header("Authorization", "Bearer invalid-token"))
+                    .andExpect(status().isUnauthorized()).andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        }
+    }
+
+    @Test
+    void refreshCookieAloneDoesNotAuthenticateOwnerRoutes() throws Exception {
+        register();
+        Cookie refresh = login().getResponse().getCookie("refresh_token");
+        assertThat(refresh).isNotNull();
+        for (var request : ownerRequests()) {
+            mvc.perform(request.cookie(refresh)).andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+        }
+        // The cookie is valid for refresh, but never authenticates the owner namespace.
+        mvc.perform(secured("/refresh").cookie(refresh)).andExpect(status().isOk());
+    }
+
+    @Test
+    void validUserJwtCanAccessOwnerNamespaceWithoutCsrf() throws Exception {
+        register();
+        String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
+        assertThat(decoder.decode(access).getClaimAsStringList("roles")).containsExactly("USER");
+        for (var request : ownerRequests()) {
+            // Includes POST and PUT with neither a CSRF header nor any cookie.
+            mvc.perform(request.header("Authorization", "Bearer " + access))
+                    .andExpect(status().isOk()).andExpect(content().string("authenticated"));
+        }
+    }
+
+    @Test
+    void adminPassesAuthenticationWithoutBeingTreatedAsGlobalOwner() throws Exception {
+        register();
+        jdbc.update("update user_roles set role='ADMIN' where user_id=(select id from users where email=?)", email);
+        String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
+        assertThat(decoder.decode(access).getClaimAsStringList("roles")).containsExactly("ADMIN");
+        // ADMIN-only is authenticated. The fixture does not evaluate or grant resource ownership.
+        for (var request : ownerRequests()) {
+            mvc.perform(request.header("Authorization", "Bearer " + access))
+                    .andExpect(status().isOk()).andExpect(content().string("authenticated"));
+        }
+    }
+
+    @Test
+    void unrelatedNestedOwnerRoutesAndUnsupportedMethodsRemainDenied() throws Exception {
+        register();
+        String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
+        String collection = "/api/v1/users/me/establishments";
+        String detail = collection + "/" + UUID.randomUUID();
+        for (var request : List.of(post(detail + "/operating-hours"), get(detail + "/operating-hours"),
+                put(detail + "/operating-hours"), post(detail + "/resubmit"),
+                post(detail), put(collection), patch(detail), delete(detail), delete(collection),
+                get("/api/v1/users/me/unrelated"), get(detail + "/extra/segment"))) {
+            mvc.perform(request.header("Authorization", "Bearer " + access))
+                    .andExpect(status().isForbidden()).andExpect(jsonPath("$.code").value("FORBIDDEN"));
+        }
+    }
+
+    private List<MockHttpServletRequestBuilder> ownerRequests() {
+        String collection = "/api/v1/users/me/establishments";
+        String detail = collection + "/" + UUID.randomUUID();
+        return List.of(post(collection), get(collection), get(detail), put(detail));
     }
 
     private String signed(String subject, String issuer, String audience, Instant issued, Instant expires) {

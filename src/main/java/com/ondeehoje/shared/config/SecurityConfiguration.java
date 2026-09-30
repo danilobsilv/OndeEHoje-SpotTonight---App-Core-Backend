@@ -72,6 +72,10 @@ public class SecurityConfiguration {
             authorize.requestMatchers(HttpMethod.GET, "/api/v1/categories").permitAll();
             authorize.requestMatchers("/api/v1/admin/**").hasRole("ADMIN");
             authorize.requestMatchers(HttpMethod.GET, "/api/v1/users/me").authenticated();
+            authorize.requestMatchers(HttpMethod.POST, "/api/v1/users/me/establishments").authenticated();
+            authorize.requestMatchers(HttpMethod.GET, "/api/v1/users/me/establishments",
+                    "/api/v1/users/me/establishments/{id}").authenticated();
+            authorize.requestMatchers(HttpMethod.PUT, "/api/v1/users/me/establishments/{id}").authenticated();
             if (local) {
                 authorize.requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/swagger-ui.html",
                         "/swagger-ui/**").permitAll();
