@@ -45,8 +45,6 @@ import org.testcontainers.junit.jupiter.*;
 class AuthIntegrationTest {
     @org.springframework.web.bind.annotation.RestController
     static class OwnerEstablishmentSecurityFixture {
-        @org.springframework.web.bind.annotation.PostMapping("/api/v1/users/me/establishments")
-        String create() { return "authenticated"; }
         @org.springframework.web.bind.annotation.GetMapping("/api/v1/users/me/establishments")
         String list() { return "authenticated"; }
         @org.springframework.web.bind.annotation.GetMapping("/api/v1/users/me/establishments/{id}")
@@ -421,8 +419,8 @@ class AuthIntegrationTest {
         register();
         String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
         assertThat(decoder.decode(access).getClaimAsStringList("roles")).containsExactly("USER");
-        for (var request : ownerRequests()) {
-            // Includes POST and PUT with neither a CSRF header nor any cookie.
+        for (var request : ownerFixtureRequests()) {
+            // PUT has neither a CSRF header nor any cookie; real POST is covered by creation tests.
             mvc.perform(request.header("Authorization", "Bearer " + access))
                     .andExpect(status().isOk()).andExpect(content().string("authenticated"));
         }
@@ -435,7 +433,7 @@ class AuthIntegrationTest {
         String access = mapper.readTree(login().getResponse().getContentAsString()).get("accessToken").asText();
         assertThat(decoder.decode(access).getClaimAsStringList("roles")).containsExactly("ADMIN");
         // ADMIN-only is authenticated. The fixture does not evaluate or grant resource ownership.
-        for (var request : ownerRequests()) {
+        for (var request : ownerFixtureRequests()) {
             mvc.perform(request.header("Authorization", "Bearer " + access))
                     .andExpect(status().isOk()).andExpect(content().string("authenticated"));
         }
@@ -457,9 +455,15 @@ class AuthIntegrationTest {
     }
 
     private List<MockHttpServletRequestBuilder> ownerRequests() {
+        var requests = new ArrayList<>(ownerFixtureRequests());
+        requests.add(post("/api/v1/users/me/establishments"));
+        return requests;
+    }
+
+    private List<MockHttpServletRequestBuilder> ownerFixtureRequests() {
         String collection = "/api/v1/users/me/establishments";
         String detail = collection + "/" + UUID.randomUUID();
-        return List.of(post(collection), get(collection), get(detail), put(detail));
+        return List.of(get(collection), get(detail), put(detail));
     }
 
     private String signed(String subject, String issuer, String audience, Instant issued, Instant expires) {
