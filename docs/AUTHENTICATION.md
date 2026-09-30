@@ -196,7 +196,7 @@ namespace. The dedicated `/api/v1/auth/**` chain remains CSRF protected.
 
 - HS256 JWTs use `JWT_SECRET`, a Base64-encoded random key of at least 32 bytes.
   Claims are only `iss`, `aud`, `sub` (user UUID), `iat`, `exp`, and `roles`.
-  The issuer is `onde-e-hoje` and audience is `onde-e-hoje-api`. Signature,
+  The issuer is `spotnight` and audience is `spotnight-api`. Signature,
   algorithm, issuer, audience, required claims and expiry are validated, with no
   expiry grace. Time is supplied by the application's injectable Clock.
 - `ACCESS_TOKEN_TTL` defaults to PT15M and must be 1 second through 30 minutes.

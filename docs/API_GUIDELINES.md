@@ -1,4 +1,4 @@
-# REST API Guidelines — Onde é Hoje
+# REST API Guidelines — SpotNight
 
 ## Base path
 

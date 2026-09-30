@@ -1,4 +1,4 @@
-# Onde é Hoje — Backend
+# SpotNight — Backend
 
 Backend-first application for discovering establishments that are open now and, in later milestones, receiving personalized recommendations.
 

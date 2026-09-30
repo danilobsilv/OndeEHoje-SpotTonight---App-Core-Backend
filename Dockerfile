@@ -10,7 +10,7 @@ COPY src/main/ src/main/
 # Run the full Testcontainers suite on the host/CI before building the image.
 # Image builds do not require access to a Docker daemon or a database.
 RUN --mount=type=cache,target=/root/.m2 ./mvnw -B -ntp -DskipTests package \
-    && cp target/onde-e-hoje-backend-*.jar /workspace/app.jar
+    && cp target/spotnight-backend-*.jar /workspace/app.jar
 
 FROM eclipse-temurin:21-jre-jammy AS runtime
 # curl is used only for the container's Actuator healthcheck.

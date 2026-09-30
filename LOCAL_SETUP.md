@@ -39,7 +39,7 @@ only with `local` active and `prod` absent. Production requires HTTPS and secure
 | --- | --- | --- |
 | `DB_USERNAME`, `DB_PASSWORD` | Export matching database credentials | Read from shell or `.env` |
 | `DB_PORT` | PostgreSQL's published host port; defaults to 5432 | Does not change the internal database port |
-| `DB_URL` | `jdbc:postgresql://localhost:5432/ondeehoje`; adjust for `DB_PORT` | Explicitly set to `jdbc:postgresql://postgres:5432/ondeehoje` |
+| `DB_URL` | `jdbc:postgresql://localhost:5432/spotnight`; adjust for `DB_PORT` | Explicitly set to `jdbc:postgresql://postgres:5432/spotnight` |
 | `SPRING_PROFILES_ACTIVE` | Use `local` | Defaults to `local`; use `prod` to disable Swagger |
 
 Compose reads `.env` automatically; Spring Boot on the host does not. Shell
@@ -62,7 +62,7 @@ PowerShell:
 ```powershell
 $env:DB_USERNAME = 'your-local-username'
 $env:DB_PASSWORD = 'your-local-password'
-$env:DB_URL = 'jdbc:postgresql://localhost:5432/ondeehoje'
+$env:DB_URL = 'jdbc:postgresql://localhost:5432/spotnight'
 .\mvnw.cmd spring-boot:run '-Dspring-boot.run.profiles=local'
 ```
 
@@ -71,7 +71,7 @@ Bash:
 ```bash
 export DB_USERNAME='your-local-username'
 export DB_PASSWORD='your-local-password'
-export DB_URL='jdbc:postgresql://localhost:5432/ondeehoje'
+export DB_URL='jdbc:postgresql://localhost:5432/spotnight'
 bash ./mvnw spring-boot:run -Dspring-boot.run.profiles=local
 ```
 
@@ -176,9 +176,9 @@ configuration. The volume name is specific to this repository's default Compose
 project; inspect its labels and verify the project before removing it.
 
 ```sh
-docker volume inspect ondeehoje-spottonight---app-core-backend_postgres_data
+docker volume inspect spotnight-app-core-backend_postgres_data
 docker compose down
-docker volume rm ondeehoje-spottonight---app-core-backend_postgres_data
+docker volume rm spotnight-app-core-backend_postgres_data
 docker compose build
 docker compose up -d --wait --wait-timeout 180
 ```
